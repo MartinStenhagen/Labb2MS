@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -85,5 +86,29 @@ class BookingSystemTest {
         verify(mockRoom, never()).addBooking(any());
         verify(roomRepository, never()).save(any());
         verify(notificationService, never()).sendBookingConfirmation(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when booking in the past")
+    void bookRoom_shouldThrowException_whenDateIsInThePast() {
+        // Arrange
+        String roomId = "room3";
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime startTimeInThePast = now.minusHours(1);
+        LocalDateTime endTime = now.plusHours(1);
+
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+
+        // Act & Assert
+        assertThatThrownBy(() -> {
+            bookingSystem.bookRoom(roomId, startTimeInThePast, endTime);
+        })
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Kan inte boka tid i dåtid");
+
+        // Verify that no booking was made because the validation failed first
+        verify(roomRepository, never()).findById(anyString());
+        verify(mockRoom, never()).addBooking(any());
+        verify(roomRepository, never()).save(any());
     }
 }
