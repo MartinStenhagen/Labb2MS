@@ -9,7 +9,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +23,8 @@ class BookingSystemTest {
     private RoomRepository roomRepository;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private Room mockRoom;
 
     private BookingSystem bookingSystem;
 
@@ -41,9 +42,6 @@ class BookingSystemTest {
         LocalDateTime startTime = now.plusHours(1);
         LocalDateTime endTime = now.plusHours(2);
 
-        // Assuming Room has a constructor like Room(String id, String name, double price)
-        Room mockRoom = new Room(roomId, "Test Room");
-
         // Configure mocks
         when(timeProvider.getCurrentTime()).thenReturn(now);
         when(roomRepository.findById(roomId)).thenReturn(Optional.of(mockRoom));
@@ -55,12 +53,37 @@ class BookingSystemTest {
         // Assert
         assertThat(result).isTrue();
 
-        // Verify interactions with mocks
+        // Verify interactions
         verify(roomRepository).findById(roomId);
-        verify(mockRoom).isAvailable(startTime, endTime);
-        // Verify that addBooking was called on the mockRoom with any Booking instance
         verify(mockRoom).addBooking(any(Booking.class));
         verify(roomRepository).save(mockRoom);
         verify(notificationService).sendBookingConfirmation(any(Booking.class));
+    }
+
+    @Test
+    @DisplayName("Should return false when room is not available")
+    void bookRoom_shouldReturnFalse_whenRoomIsNotAvailable() throws NotificationException {
+        // Arrange
+        String roomId = "room2";
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime startTime = now.plusHours(1);
+        LocalDateTime endTime = now.plusHours(2);
+
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+        // The room exists
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(mockRoom));
+        // But it is not available
+        when(mockRoom.isAvailable(startTime, endTime)).thenReturn(false);
+
+        // Act
+        boolean result = bookingSystem.bookRoom(roomId, startTime, endTime);
+
+        // Assert
+        assertThat(result).isFalse();
+
+        // Verify that no booking was made
+        verify(mockRoom, never()).addBooking(any());
+        verify(roomRepository, never()).save(any());
+        verify(notificationService, never()).sendBookingConfirmation(any());
     }
 }
