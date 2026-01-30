@@ -111,4 +111,28 @@ class BookingSystemTest {
         verify(mockRoom, never()).addBooking(any());
         verify(roomRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Should throw an exception when endtime is before starttime")
+    void bookRoom_shouldThrowException_whenEndTimeIsBeforeStartTime() {
+        String roomId = "room4";
+
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime startTime = now.plusDays(4);
+        LocalDateTime endTime = now.minusHours(2);
+
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+
+        // Act & Assert
+        assertThatThrownBy(() -> {
+            bookingSystem.bookRoom(roomId, startTime, endTime);
+        })
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Sluttid måste vara efter starttid");
+
+        // Verify that no booking was made because the validation failed first
+        verify(roomRepository, never()).findById(anyString());
+        verify(mockRoom, never()).addBooking(any());
+        verify(roomRepository, never()).save(any());
+    }
 }
