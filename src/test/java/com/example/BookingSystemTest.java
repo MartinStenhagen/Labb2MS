@@ -41,7 +41,7 @@ class BookingSystemTest {
 
     @Test
     @DisplayName("Should successfully book a room when it is available")
-    void bookRoom_shouldSucceed_whenRoomIsAvailable() { // Removed throws NotificationException
+    void bookRoom_shouldSucceed_whenRoomIsAvailable() throws NotificationException { // Removed throws NotificationException
         // Arrange
         String roomId = "room1";
         LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
@@ -68,7 +68,7 @@ class BookingSystemTest {
 
     @Test
     @DisplayName("Should return false when room is not available")
-    void bookRoom_shouldReturnFalse_whenRoomIsNotAvailable() { // Removed throws NotificationException
+    void bookRoom_shouldReturnFalse_whenRoomIsNotAvailable() throws NotificationException { // Removed throws NotificationException
         // Arrange
         String roomId = "room2";
         LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
@@ -143,7 +143,7 @@ class BookingSystemTest {
 
     @ParameterizedTest(name = "Should throw exception when {0} is null")
     @MethodSource("nullArgumentsForBookRoom")
-    void bookRoom_shouldThrowException_whenArgumentsAreNull(String testName, String roomId, LocalDateTime startTime, LocalDateTime endTime) { // Removed throws NotificationException
+    void bookRoom_shouldThrowException_whenArgumentsAreNull(String testName, String roomId, LocalDateTime startTime, LocalDateTime endTime) throws NotificationException { // Removed throws NotificationException
         // Arrange - No specific timeProvider stubbing needed as the null check occurs before timeProvider is accessed
 
         // Act & Assert
@@ -173,7 +173,7 @@ class BookingSystemTest {
 
     @Test
     @DisplayName("Should throw exception when room is not found")
-    void bookRoom_shouldThrowException_whenRoomNotFound() { // Removed throws NotificationException
+    void bookRoom_shouldThrowException_whenRoomNotFound() throws NotificationException { // Removed throws NotificationException
         // Arrange
         String roomId = "nonExistentRoom";
         LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
@@ -197,5 +197,34 @@ class BookingSystemTest {
         verify(mockRoom, never()).addBooking(any());
         verify(roomRepository, never()).save(any());
         verify(notificationService, never()).sendBookingConfirmation(any());
+    }
+
+    @Test
+    @DisplayName("Should still succeed when notification service fails")
+    void bookRoom_shouldStillSucceed_whenNotificationFails() throws NotificationException {
+        // Arrange
+        String roomId = "roomNotifFail";
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime startTime = now.plusHours(1);
+        LocalDateTime endTime = now.plusHours(2);
+
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+        when(roomRepository.findById(roomId)).thenReturn(Optional.of(mockRoom));
+        when(mockRoom.isAvailable(startTime, endTime)).thenReturn(true);
+        // Configure notificationService to throw an exception
+        doThrow(new NotificationException("Notification failed")).when(notificationService).sendBookingConfirmation(any(Booking.class));
+
+        // Act
+        boolean result = bookingSystem.bookRoom(roomId, startTime, endTime);
+
+        // Assert
+        assertThat(result).isTrue(); // Booking should still be true
+
+        // Verify that all steps leading to successful booking were called
+        verify(roomRepository).findById(roomId);
+        verify(mockRoom).isAvailable(startTime, endTime);
+        verify(mockRoom).addBooking(any(Booking.class));
+        verify(roomRepository).save(mockRoom);
+        verify(notificationService).sendBookingConfirmation(any(Booking.class)); // Notification was attempted
     }
 }
