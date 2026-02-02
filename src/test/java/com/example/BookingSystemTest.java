@@ -403,4 +403,46 @@ class BookingSystemTest {
         verify(roomRepository, never()).findAll();
         verify(notificationService, never()).sendCancellationConfirmation(any());
     }
+
+    @Test
+    @DisplayName("Should still succeed when cancellation confirmation notification fails")
+    void cancelBooking_shouldStillSucceed_whenNotificationFails() throws NotificationException {
+        // Arrange
+        String bookingId = "bookingNotifFail";
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime bookingStartTime = now.plusDays(1); // Booking is in the future
+
+        // Mock a Booking object
+        Booking mockBooking = mock(Booking.class);
+        when(mockBooking.getStartTime()).thenReturn(bookingStartTime);
+
+        // Configure mockRoom to have this booking
+        when(mockRoom.hasBooking(bookingId)).thenReturn(true);
+        when(mockRoom.getBooking(bookingId)).thenReturn(mockBooking);
+        // Configure roomRepository to return this room
+        when(roomRepository.findAll()).thenReturn(java.util.Arrays.asList(mockRoom));
+
+        // Configure timeProvider
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+
+        // Configure notificationService to throw an exception
+        doThrow(new NotificationException("Cancellation notification failed"))
+            .when(notificationService).sendCancellationConfirmation(mockBooking);
+
+        // Act
+        boolean result = bookingSystem.cancelBooking(bookingId);
+
+        // Assert
+        assertThat(result).isTrue(); // Cancellation should still be true
+
+        // Verify that all steps leading to successful cancellation were called
+        verify(roomRepository).findAll();
+        verify(mockRoom).hasBooking(bookingId);
+        verify(mockRoom).getBooking(bookingId);
+        verify(mockBooking).getStartTime();
+        verify(timeProvider).getCurrentTime();
+        verify(mockRoom).removeBooking(bookingId);
+        verify(roomRepository).save(mockRoom);
+        verify(notificationService).sendCancellationConfirmation(mockBooking); // Notification was attempted
+    }
 }
