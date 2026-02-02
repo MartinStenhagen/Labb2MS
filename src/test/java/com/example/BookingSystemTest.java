@@ -227,4 +227,38 @@ class BookingSystemTest {
         verify(roomRepository).save(mockRoom);
         verify(notificationService).sendBookingConfirmation(any(Booking.class)); // Notification was attempted
     }
+
+    @Test
+    @DisplayName("Should return only rooms that are available for the given time slot")
+    void getAvailableRooms_shouldReturnOnlyAvailableRooms() {
+        // Arrange
+        LocalDateTime queryStartTime = LocalDateTime.of(2026, 2, 1, 9, 0);
+        LocalDateTime queryEndTime = LocalDateTime.of(2026, 2, 1, 10, 0);
+
+        // Create mock rooms and stub their isAvailable method
+        Room availableRoom1 = mock(Room.class);
+        when(availableRoom1.isAvailable(queryStartTime, queryEndTime)).thenReturn(true);
+
+        Room unavailableRoom = mock(Room.class);
+        when(unavailableRoom.isAvailable(queryStartTime, queryEndTime)).thenReturn(false);
+
+        Room availableRoom2 = mock(Room.class);
+        when(availableRoom2.isAvailable(queryStartTime, queryEndTime)).thenReturn(true);
+
+        // Configure roomRepository to return all mock rooms
+        when(roomRepository.findAll()).thenReturn(java.util.Arrays.asList(availableRoom1, unavailableRoom, availableRoom2));
+
+        // Act
+        java.util.List<Room> result = bookingSystem.getAvailableRooms(queryStartTime, queryEndTime);
+
+        // Assert
+        assertThat(result).hasSize(2);
+        assertThat(result).containsExactlyInAnyOrder(availableRoom1, availableRoom2);
+
+        // Verify interactions
+        verify(roomRepository).findAll();
+        verify(availableRoom1).isAvailable(queryStartTime, queryEndTime);
+        verify(unavailableRoom).isAvailable(queryStartTime, queryEndTime);
+        verify(availableRoom2).isAvailable(queryStartTime, queryEndTime);
+    }
 }
