@@ -357,4 +357,33 @@ class BookingSystemTest {
         verify(roomRepository, never()).save(any());
         verify(notificationService, never()).sendCancellationConfirmation(any());
     }
+
+    @Test
+    @DisplayName("Should throw exception when trying to cancel a booking that has already started")
+    void cancelBooking_shouldThrowException_whenBookingIsInThePast() throws NotificationException {
+        // Arrange
+        String bookingId = "pastBooking123";
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime bookingStartTimeInPast = now.minusHours(1); // Booking started an hour ago
+
+        Booking mockBooking = mock(Booking.class);
+        when(mockBooking.getStartTime()).thenReturn(bookingStartTimeInPast);
+
+        when(mockRoom.hasBooking(bookingId)).thenReturn(true);
+        when(mockRoom.getBooking(bookingId)).thenReturn(mockBooking);
+        when(roomRepository.findAll()).thenReturn(java.util.Arrays.asList(mockRoom));
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+
+        // Act & Assert
+        assertThatThrownBy(() -> {
+            bookingSystem.cancelBooking(bookingId);
+        })
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("Kan inte avboka påbörjad eller avslutad bokning");
+
+        // Verify that cancellation actions were not taken
+        verify(mockRoom, never()).removeBooking(anyString());
+        verify(roomRepository, never()).save(any());
+        verify(notificationService, never()).sendCancellationConfirmation(any());
+    }
 }
