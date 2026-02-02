@@ -1,23 +1,27 @@
 package com.example.payment;
 
-//public class PaymentProcessor {
-//    private static final String API_KEY = "sk_test_123456";
-//
-//    public boolean processPayment(double amount) {
-//        // Anropar extern betaltjänst direkt med statisk API-nyckel
-//        PaymentApiResponse response = PaymentApi.charge(API_KEY, amount);
-//
-//        // Skriver till databas direkt
-//        if (response.isSuccess()) {
-//            DatabaseConnection.getInstance()
-//                    .executeUpdate("INSERT INTO payments (amount, status) VALUES (" + amount + ", 'SUCCESS')");
-//        }
-//
-//        // Skickar e-post direkt
-//        if (response.isSuccess()) {
-//            EmailService.sendPaymentConfirmation("user@example.com", amount);
-//        }
-//
-//        return response.isSuccess();
-//    }
-//}
+public class PaymentProcessor {
+    private final PaymentGateway paymentGateway;
+    private final PaymentRepository paymentRepository;
+    private final NotificationClient notificationClient;
+
+    public PaymentProcessor(PaymentGateway paymentGateway,
+                              PaymentRepository paymentRepository,
+                              NotificationClient notificationClient) {
+        this.paymentGateway = paymentGateway;
+        this.paymentRepository = paymentRepository;
+        this.notificationClient = notificationClient;
+    }
+
+    public boolean processPayment(double amount, String recipient) {
+        PaymentApiResponse response = paymentGateway.charge(amount);
+
+        if (response.isSuccess()) {
+            paymentRepository.savePayment(amount, "SUCCESS");
+            notificationClient.sendPaymentConfirmation(recipient, amount);
+        }
+
+        return response.isSuccess();
+    }
+}
+
