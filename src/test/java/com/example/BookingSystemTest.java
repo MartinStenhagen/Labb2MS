@@ -324,4 +324,37 @@ class BookingSystemTest {
         verify(roomRepository).save(mockRoom);
         verify(notificationService).sendCancellationConfirmation(mockBooking);
     }
+
+    @Test
+    @DisplayName("Should return false when trying to cancel a booking that does not exist")
+    void cancelBooking_shouldReturnFalse_whenBookingNotFound() throws NotificationException {
+        // Arrange
+        String nonExistentBookingId = "nonExistentBooking";
+        Room anotherMockRoom = mock(Room.class); // Another room to ensure filtering works
+
+        // Configure mockRoom to NOT have the booking
+        when(mockRoom.hasBooking(nonExistentBookingId)).thenReturn(false);
+        // Configure anotherMockRoom to NOT have the booking either
+        when(anotherMockRoom.hasBooking(nonExistentBookingId)).thenReturn(false);
+
+        // Configure roomRepository to return a list of rooms, none of which have the booking
+        when(roomRepository.findAll()).thenReturn(java.util.Arrays.asList(mockRoom, anotherMockRoom));
+
+        // Act
+        boolean result = bookingSystem.cancelBooking(nonExistentBookingId);
+
+        // Assert
+        assertThat(result).isFalse();
+
+        // Verify interactions
+        verify(roomRepository).findAll();
+        verify(mockRoom).hasBooking(nonExistentBookingId);
+        verify(anotherMockRoom).hasBooking(nonExistentBookingId); // Ensure all rooms were checked
+        verify(mockRoom, never()).getBooking(anyString());
+        verify(anotherMockRoom, never()).getBooking(anyString());
+        verify(mockRoom, never()).removeBooking(anyString());
+        verify(anotherMockRoom, never()).removeBooking(anyString());
+        verify(roomRepository, never()).save(any());
+        verify(notificationService, never()).sendCancellationConfirmation(any());
+    }
 }
