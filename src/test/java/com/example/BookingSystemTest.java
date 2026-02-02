@@ -261,4 +261,29 @@ class BookingSystemTest {
         verify(unavailableRoom).isAvailable(queryStartTime, queryEndTime);
         verify(availableRoom2).isAvailable(queryStartTime, queryEndTime);
     }
+
+    @ParameterizedTest(name = "getAvailableRooms: should throw exception for {0}")
+    @MethodSource("invalidTimeRangesForGetAvailableRooms")
+    void getAvailableRooms_shouldThrowException_forInvalidTimeRanges(String testName, LocalDateTime startTime, LocalDateTime endTime, String expectedMessage) {
+        // Act & Assert
+        assertThatThrownBy(() -> {
+            bookingSystem.getAvailableRooms(startTime, endTime);
+        })
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(expectedMessage);
+
+        // Verify no repository interaction
+        verify(roomRepository, never()).findAll();
+    }
+
+    private static Stream<Arguments> invalidTimeRangesForGetAvailableRooms() {
+        LocalDateTime time1 = LocalDateTime.of(2026, 2, 1, 10, 0);
+        LocalDateTime time2 = LocalDateTime.of(2026, 2, 1, 11, 0);
+
+        return Stream.of(
+            Arguments.of("null start time", null, time2, "Måste ange både start- och sluttid"),
+            Arguments.of("null end time", time1, null, "Måste ange både start- och sluttid"),
+            Arguments.of("end time before start time", time2, time1, "Sluttid måste vara efter starttid")
+        );
+    }
 }
