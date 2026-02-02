@@ -286,4 +286,42 @@ class BookingSystemTest {
             Arguments.of("end time before start time", time2, time1, "Sluttid måste vara efter starttid")
         );
     }
+
+    @Test
+    @DisplayName("Should successfully cancel a booking that exists and is in the future")
+    void cancelBooking_shouldSucceed_whenBookingExistsAndIsInTheFuture() throws NotificationException {
+        // Arrange
+        String bookingId = "booking123";
+        LocalDateTime now = LocalDateTime.of(2026, 1, 30, 10, 0);
+        LocalDateTime bookingStartTime = now.plusDays(1); // Booking is in the future
+
+        // Mock a Booking object
+        Booking mockBooking = mock(Booking.class);
+        when(mockBooking.getStartTime()).thenReturn(bookingStartTime);
+
+        // Configure mockRoom to have this booking
+        when(mockRoom.hasBooking(bookingId)).thenReturn(true);
+        when(mockRoom.getBooking(bookingId)).thenReturn(mockBooking);
+        // Configure roomRepository to return this room
+        when(roomRepository.findAll()).thenReturn(java.util.Arrays.asList(mockRoom));
+
+        // Configure timeProvider
+        when(timeProvider.getCurrentTime()).thenReturn(now);
+
+        // Act
+        boolean result = bookingSystem.cancelBooking(bookingId);
+
+        // Assert
+        assertThat(result).isTrue();
+
+        // Verify interactions
+        verify(roomRepository).findAll();
+        verify(mockRoom).hasBooking(bookingId);
+        verify(mockRoom).getBooking(bookingId);
+        verify(mockBooking).getStartTime();
+        verify(timeProvider).getCurrentTime();
+        verify(mockRoom).removeBooking(bookingId);
+        verify(roomRepository).save(mockRoom);
+        verify(notificationService).sendCancellationConfirmation(mockBooking);
+    }
 }
