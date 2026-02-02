@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,5 +51,27 @@ class PaymentProcessorTest {
         verify(paymentGateway).charge(amount);
         verify(paymentRepository).savePayment(amount, "SUCCESS");
         verify(notificationClient).sendPaymentConfirmation(recipient, amount);
+    }
+
+    @Test
+    @DisplayName("Should return false and not perform actions when payment fails")
+    void processPayment_shouldReturnFalse_whenPaymentFails() {
+        // Arrange
+        double amount = 150.0;
+        String recipient = "fail@example.com";
+        PaymentApiResponse failedResponse = new PaymentApiResponse(false);
+
+        when(paymentGateway.charge(amount)).thenReturn(failedResponse);
+
+        // Act
+        boolean result = paymentProcessor.processPayment(amount, recipient);
+
+        // Assert
+        assertThat(result).isFalse();
+
+        // Verify
+        verify(paymentGateway).charge(amount);
+        verify(paymentRepository, never()).savePayment(anyDouble(), anyString());
+        verify(notificationClient, never()).sendPaymentConfirmation(anyString(), anyDouble());
     }
 }
