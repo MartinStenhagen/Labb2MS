@@ -48,24 +48,24 @@ public class PaymentProcessor {
 
 ### **3. Step-by-Step Refactoring Decisions**
 
-To solve these problems, we introduced a layer of abstraction for each dependency.
+To solve these problems, a layer of abstraction for each dependency was introduced.
 
 #### **Decision 1: Abstract the Payment Gateway**
 
 *   **Problem:** The hard-coded, static call to `PaymentApi.charge`.
-*   **Solution:** We created a `PaymentGateway` interface to represent the action of charging a payment.
+*   **Solution:**  Created a `PaymentGateway` interface to represent the action of charging a payment.
     ```java
     // New Interface: PaymentGateway.java
     public interface PaymentGateway {
         PaymentApiResponse charge(double amount);
     }
     ```
-*   **Justification:** `PaymentProcessor` no longer needs to know *how* a payment is processed. This allows us to provide a mock `PaymentGateway` in our tests to simulate both successful and failed payments instantly, without any network calls.
+*   **Justification:** `PaymentProcessor` no longer needs to know *how* a payment is processed. This allows us to provide a mock `PaymentGateway` in the tests to simulate both successful and failed payments instantly, without any network calls.
 
 #### **Decision 2: Abstract the Database Persistence**
 
 *   **Problem:** The direct call to the `DatabaseConnection` singleton.
-*   **Solution:** We created a `PaymentRepository` interface to represent the action of saving a payment record.
+*   **Solution:** Created a `PaymentRepository` interface to represent the action of saving a payment record.
     ```java
     // New Interface: PaymentRepository.java
     public interface PaymentRepository {
@@ -77,18 +77,18 @@ To solve these problems, we introduced a layer of abstraction for each dependenc
 #### **Decision 3: Abstract the Notification Service**
 
 *   **Problem:** The static call to `EmailService.sendPaymentConfirmation`.
-*   **Solution:** We created a `NotificationClient` interface to represent the action of sending a notification.
+*   **Solution:** A `NotificationClient` interface was created to represent the action of sending a notification.
     ```java
     // New Interface: NotificationClient.java
     public interface NotificationClient {
         void sendPaymentConfirmation(String recipient, double amount);
     }
     ```
-*   **Justification:** This decouples `PaymentProcessor` from the specific method of notification. In our tests, we can use a mock `NotificationClient` to verify that a notification was attempted with the correct recipient and amount, without sending any actual emails.
+*   **Justification:** This decouples `PaymentProcessor` from the specific method of notification. In  the tests, we can use a mock `NotificationClient` to verify that a notification was attempted with the correct recipient and amount, without sending any actual emails.
 
 #### **4. The "After" State: A Testable `PaymentProcessor`**
 
-By applying these decisions, we arrived at the new, refactored `PaymentProcessor`:
+By applying these decisions, the refactored `PaymentProcessor` now looks like this:
 
 ```java
 // Refactored PaymentProcessor.java
@@ -119,6 +119,22 @@ public class PaymentProcessor {
     }
 }
 ```
+In addition to dependency injection, the refactored implementation now includes input validation to enforce a clear method contract. Invalid input is rejected before any interaction with external dependencies occurs.
 
-**Conclusion:**
+#### **5. Testing Strategy**
+
+The refactored PaymentProcessor was tested in isolation using mocked dependencies.
+
+The tests cover:
+
+Successful payment flow: Verifies that the payment is charged, persisted, and a notification is sent.
+
+Failed payment flow: Verifies that no side effects occur when the payment fails.
+
+Input validation edge cases: Ensures that invalid amounts and recipients are rejected with clear exceptions.
+
+By mocking all external dependencies, the tests are fast, deterministic, and focused solely on the behavior of PaymentProcessor.
+
+#### **Conclusion:**
+
 The `PaymentProcessor` is now a simple orchestrator. It coordinates calls to the dependencies it is given but contains no complex logic or external dependencies itself. This makes it extremely easy to unit test, as we proved by writing tests that could fully control and verify its behavior using mocks.
