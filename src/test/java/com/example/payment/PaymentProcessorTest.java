@@ -80,7 +80,7 @@ class PaymentProcessorTest {
     }
 
     @Test
-    @DisplayName("processPayment: amount <= 0 should throw IllegalArgumentException")
+    @DisplayName("amount <= 0 should throw IllegalArgumentException")
     void processPayment_whenAmountIsZeroOrNegative_shouldThrowException() {
         assertThatThrownBy(() ->
                 paymentProcessor.processPayment(0, "user@example.com"))
@@ -89,6 +89,19 @@ class PaymentProcessorTest {
         assertThatThrownBy(() ->
                 paymentProcessor.processPayment(-10, "user@example.com"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("recipient null or blank should throw IllegalArgumentException")
+    void processPayment_whenRecipientIsNullOrBlank_shouldThrowException() {
+        assertThatThrownBy(()->
+                paymentProcessor.processPayment(100, null))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(()->
+                paymentProcessor.processPayment(100, " "))
+                .isInstanceOf(IllegalArgumentException.class);
+
     }
 
 }
