@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 
 
@@ -77,4 +78,17 @@ class PaymentProcessorTest {
         verify(paymentGateway).charge(amount);
         verifyNoInteractions(paymentRepository, notificationClient);
     }
+
+    @Test
+    @DisplayName("processPayment: amount <= 0 should throw IllegalArgumentException")
+    void processPayment_whenAmountIsZeroOrNegative_shouldThrowException() {
+        assertThatThrownBy(() ->
+                paymentProcessor.processPayment(0, "user@example.com"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() ->
+                paymentProcessor.processPayment(-10, "user@example.com"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
 }
