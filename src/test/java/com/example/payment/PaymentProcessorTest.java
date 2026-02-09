@@ -6,13 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+
+
 
 @ExtendWith(MockitoExtension.class)
 class PaymentProcessorTest {
@@ -51,6 +53,8 @@ class PaymentProcessorTest {
         verify(paymentGateway).charge(amount);
         verify(paymentRepository).savePayment(amount, "SUCCESS");
         verify(notificationClient).sendPaymentConfirmation(recipient, amount);
+
+        verifyNoMoreInteractions(paymentGateway, paymentRepository, notificationClient);
     }
 
     @Test
@@ -71,7 +75,6 @@ class PaymentProcessorTest {
 
         // Verify
         verify(paymentGateway).charge(amount);
-        verify(paymentRepository, never()).savePayment(anyDouble(), anyString());
-        verify(notificationClient, never()).sendPaymentConfirmation(anyString(), anyDouble());
+        verifyNoInteractions(paymentRepository, notificationClient);
     }
 }
