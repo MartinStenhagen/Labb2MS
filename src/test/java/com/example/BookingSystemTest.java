@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -56,14 +57,26 @@ class BookingSystemTest {
         // Act
         boolean result = bookingSystem.bookRoom(roomId, startTime, endTime);
 
-        // Assert
+        // Assert: result
         assertThat(result).isTrue();
 
-        // Verify interactions
-        verify(roomRepository).findById(roomId);
-        verify(mockRoom).addBooking(any(Booking.class));
+        ArgumentCaptor<Booking> bookingCaptor = ArgumentCaptor.forClass(Booking.class);
+        verify(mockRoom).addBooking(bookingCaptor.capture());
+
+        Booking capturedBooking = bookingCaptor.getValue();
+
+        // Assert: booking
+        assertThat(capturedBooking.getRoomId()).isEqualTo(roomId);
+        assertThat(capturedBooking.getStartTime()).isEqualTo(startTime);
+        assertThat(capturedBooking.getEndTime()).isEqualTo(endTime);
+        assertThat(capturedBooking.getId())
+                .as("Booking-id ska genereras")
+                .isNotNull()
+                .isNotBlank();
+
+        // Verify other interactions
         verify(roomRepository).save(mockRoom);
-        verify(notificationService).sendBookingConfirmation(any(Booking.class));
+        verify(notificationService).sendBookingConfirmation(capturedBooking);
     }
 
     @Test
