@@ -310,13 +310,15 @@ class BookingSystemTest {
 
         // Mock a Booking object
         Booking mockBooking = mock(Booking.class);
+        when(mockBooking.getId()).thenReturn(bookingId);
         when(mockBooking.getStartTime()).thenReturn(bookingStartTime);
+
 
         // Configure mockRoom to have this booking
         when(mockRoom.hasBooking(bookingId)).thenReturn(true);
         when(mockRoom.getBooking(bookingId)).thenReturn(mockBooking);
         // Configure roomRepository to return this room
-        when(roomRepository.findAll()).thenReturn(java.util.Arrays.asList(mockRoom));
+        when(roomRepository.findAll()).thenReturn(java.util.List.of(mockRoom));
 
         // Configure timeProvider
         when(timeProvider.getCurrentTime()).thenReturn(now);
@@ -327,15 +329,22 @@ class BookingSystemTest {
         // Assert
         assertThat(result).isTrue();
 
+        // Capture booking that sends to notify
+        ArgumentCaptor<Booking> bookingCaptor = ArgumentCaptor.forClass(Booking.class);
+        verify(notificationService).sendCancellationConfirmation(bookingCaptor.capture());
+
+        Booking capturedBooking = bookingCaptor.getValue();
+
+        // Assert that correct booking is used
+        assertThat(capturedBooking == mockBooking)
+                .as("Samma Booking-instans ska användas vid notifiering")
+                .isTrue();
+        assertThat(capturedBooking.getId()).isEqualTo(bookingId);
+        assertThat(capturedBooking.getStartTime()).isEqualTo(bookingStartTime);
+
         // Verify interactions
-        verify(roomRepository).findAll();
-        verify(mockRoom).hasBooking(bookingId);
-        verify(mockRoom).getBooking(bookingId);
-        verify(mockBooking).getStartTime();
-        verify(timeProvider).getCurrentTime();
         verify(mockRoom).removeBooking(bookingId);
         verify(roomRepository).save(mockRoom);
-        verify(notificationService).sendCancellationConfirmation(mockBooking);
     }
 
     @Test
